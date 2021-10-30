@@ -1,7 +1,103 @@
-import git as gh
 from typing import *
 import json
 import argparse
+
+class gh:
+    def branch_list(path) -> List[str]:
+        res = []
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'branch', 'list', '--all', '--no-color'],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+
+        if ret.returncode == 0:
+            for l in ret.stdout.splitlines():
+                if len(l.strip()) > 0:
+                    res.append(l[2:])
+        else:
+            print("error:", ret)
+        return res
+
+
+    def common_ancestor(path, branch1, branch2) -> str:
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'merge-base', branch1, branch2],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode == 0:
+            id = ret.stdout.strip()
+            # print("     id="+id)
+            return id
+        else:
+            print("error:", ret)
+        return None
+
+
+    def count_commits(path, branch1, branch2) -> int:
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'rev-list', "--count", branch1+".."+branch2],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode == 0:
+            return int(ret.stdout.strip())
+        else:
+            print("error:", ret)
+        return 0
+
+
+    def log_range(path, branch1, branch2) -> List[Tuple[str, str, str]]:
+        res = []
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'log', branch1+'..'+branch2, '--pretty=format:%H|%ci|%s'],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode == 0:
+            for l in ret.stdout.strip().splitlines():
+                split = l.split('|')
+                id = split[0]
+                commit_date = split[1]
+                msg = ''
+
+                if len(split) > 2:
+                    msg = split[2]
+
+                res.append(id, commit_date, msg)
+        else:
+            print("error:", ret)
+        return res
+
+
+    def log_single(path: str, commitId: str) -> Tuple[str, str, str]:
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'log', commitId, '-1', '--pretty=format:%H|%ci|%s'],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        if ret.returncode == 0:
+            split = ret.stdout.strip().split('|')
+            id = split[0]
+            commit_date = split[1]
+            msg = ''
+            if len(split) > 2:
+                msg = split[2]
+            # print("     id="+id+" date="+commit_date)
+            return (id, commit_date, msg)
+        else:
+            print("error:", ret)
+        return (None, None, '')
+
+
+    def is_ancestor(path, commit1, commit2) -> bool:
+        ret = subprocess.run(['git', '--no-pager', '-C', path, 'merge-base', '--is-ancestor', commit1, commit2],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT,
+                             universal_newlines=True)
+        # if ret.returncode == 0:
+        #     msg = "true"
+        # print("     result="+msg+","+commit1+","+commit2)
+        if ret.returncode == 0:
+            return True
+        else:
+            return False
 
 
 class NodeContainer:
